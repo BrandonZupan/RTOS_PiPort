@@ -24,6 +24,12 @@
  *
  */
 
+#ifndef _LFB_H
+#define _LFB_H
+
 void lfb_init();
+void lfb_putc(int x, int y, char c);
 void lfb_print(int x, int y, char *s);
 void lfb_proprint(int x, int y, char *s);
+
+#endif  /*_LFB_H*/

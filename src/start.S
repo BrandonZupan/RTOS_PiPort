@@ -13,6 +13,7 @@ _start:
     b    proc_hang
 
 proc_hang: 
+    wfe
     b proc_hang
 
 master:
@@ -22,7 +23,5 @@ master:
     bl     memzero
 
     mov    sp, #LOW_MEMORY
-    bl    kernel_main
-
-end:
-    b end
+    bl     kernel_main
+    b      proc_hang    // if main returns, hang

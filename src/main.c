@@ -2,21 +2,21 @@
 // Brandon Zupan
 
 #include "display.h"
-#include "furry.h"
+#include "os.h"
+#include "interpreter.h"
+#include "mini_uart.h"
 
 void kernel_main(void)
 {
     // uart_init();
-    // uart_send_string("Hello, world!\r\n");
-    DisplayInit();
-
-    // DisplayPrintS("Pee pee poo poo\n");
-
-    for (int i = 0; i < TEST_IMAGE_SIZE; i++) {
-        DisplayPrintS(test_image[i]);
-    }
+    // uart_send_string("You like programming microcontrollers, don't you\r\n");
 
     // while (1) {
-    //     // uart_send(uart_recv());
+    //     uart_send(uart_recv());
     // }
+
+    OS_Init();
+
+    // Interpreter();
+
 }
