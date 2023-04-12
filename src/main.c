@@ -17,6 +17,6 @@ void kernel_main(void)
 
     OS_Init();
 
-    // Interpreter();
+    Interpreter();
 
 }

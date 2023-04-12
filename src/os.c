@@ -9,6 +9,7 @@
 #include "furry.h"
 #include "os.h"
 #include "mini_uart.h"
+#include "uart.h"
 
 void putc(void * p, char c) {
     // output both to UART and display
@@ -16,14 +17,16 @@ void putc(void * p, char c) {
     uart_send(c);
 }
 
-void OS_GetString(char * s, uint32_t size) {
-    // TODO: Get input from UART
+void OS_InString(char * s, uint32_t max) {
+    UART_InString(s, max);
 }
 
-void print_test_image(void) {
+void OS_BoyKisser(void) {
+    printf("\r\n");
     for (int i = 0; i < TEST_IMAGE_SIZE; i++) {
         printf("%s", test_image[i]);
     }
+    printf("You like programming microcontrollers, don't you\r\n");
 }
 
 void OS_Init(void) {
@@ -32,6 +35,5 @@ void OS_Init(void) {
     uart_init();
     DisplayInit();
 
-    print_test_image();
-    printf("You like programming microcontrollers, don't you\r\n");
+    OS_BoyKisser();
 }

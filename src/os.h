@@ -6,7 +6,9 @@
 
 #include <stdint.h>
 
-void OS_GetString(char * s, uint32_t size);
+void OS_InString(char * s, uint32_t max);
+
+void OS_BoyKisser(void);
 
 void OS_Init(void);
 

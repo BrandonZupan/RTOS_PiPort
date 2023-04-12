@@ -22,7 +22,7 @@ int DisplayInit(void) {
     return 0;
 }
 
-int Display_putc(char c) {
+void Display_putc(char c) {
     if (c == '\n') {
         y = (y + Y_CHAR) % Y_RES;
         x = 0;
