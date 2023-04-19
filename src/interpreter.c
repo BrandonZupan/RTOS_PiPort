@@ -8,6 +8,8 @@
 
 #define MAX_INPUT 128
 
+extern int get_el(void);
+
 int FindSpace(char *string, int startIndex){
   int stringLength = strlen(string);
   char c;
@@ -32,6 +34,11 @@ void echo(char * input) {
 
 void boykisser(void) {
     OS_BoyKisser();
+}
+
+void el(void) {
+    int level = get_el();
+	printf("EL%d\r\n", level);
 }
 
 /**
@@ -59,6 +66,10 @@ void Interpreter(void) {
 
         if (strcmp(command, "boykisser") == 0) {
             boykisser();
-        }
+        } else
+		
+		if (strcmp (command, "el") == 0) {
+			el();
+		}
     }
 }

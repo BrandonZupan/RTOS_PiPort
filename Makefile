@@ -1,3 +1,4 @@
+SD_PATH ?= /Volumes/POGGER/
 ARMGNU ?= aarch64-unknown-linux-gnu
 
 COPS = -Wall -nostdlib -nostartfiles -ffreestanding -Iinclude -mgeneral-regs-only
@@ -10,6 +11,13 @@ all : kernel8.img
 
 clean :
 	rm -rf $(BUILD_DIR) *.img
+
+install : kernel8.img
+	cp kernel8.img $(SD_PATH)
+	diskutil eject $(SD_PATH)
+
+serial :
+	screen /dev/tty.usbserial-0001 115200
 
 $(BUILD_DIR)/%_c.o: $(SRC_DIR)/%.c
 	mkdir -p $(@D)
