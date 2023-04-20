@@ -12,4 +12,8 @@ void OS_BoyKisser(void);
 
 void OS_Init(void);
 
+uint32_t OS_CurTime(void);
+
+uint32_t OS_Timer1_Trigger(void);
+
 #endif  /*_OS_H*/

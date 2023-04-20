@@ -41,6 +41,17 @@ void el(void) {
 	printf("EL%d\r\n", level);
 }
 
+void time(void) {
+    uint32_t cur_time = OS_CurTime();
+    printf("%u cycles\r\n", cur_time);
+}
+
+void timer1(void) {
+    uint32_t next_time = OS_Timer1_Trigger();
+    printf("%u cycles\r\n", next_time);
+
+}
+
 /**
  * Interpreter
 */
@@ -70,6 +81,14 @@ void Interpreter(void) {
 		
 		if (strcmp (command, "el") == 0) {
 			el();
-		}
+		} else 
+
+        if (strcmp(command, "time") == 0) {
+            time();
+        } else 
+
+        if (strcmp(command, "timer1") == 0) {
+            timer1();
+        }
     }
 }

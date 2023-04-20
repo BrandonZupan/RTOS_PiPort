@@ -10,6 +10,8 @@
 #include "os.h"
 #include "mini_uart.h"
 #include "uart.h"
+#include "timer.h"
+#include "irq.h"
 
 void putc(void * p, char c) {
     // output both to UART and display
@@ -29,11 +31,30 @@ void OS_BoyKisser(void) {
     printf("You like programming microcontrollers, don't you\r\n");
 }
 
+void Scheduler(void) {
+    
+}
+
+uint32_t OS_CurTime(void) {
+    return Timer_CurTime();
+}
+
+uint32_t OS_Timer1_Trigger(void) {
+    return Timer1_Trigger();
+}
+
 void OS_Init(void) {
+    uart_init();
     init_printf(NULL, putc);
+    irq_vector_init();
+    enable_interrupt_controller();
 
     uart_init();
     DisplayInit();
 
-    OS_BoyKisser();
+    Timer1_Init(TIME_1MS, &Scheduler);
+
+    // OS_BoyKisser();
+
+    enable_irq();
 }

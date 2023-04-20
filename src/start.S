@@ -56,10 +56,3 @@ el1_entry:
 	mov	sp, #LOW_MEMORY
 	bl	kernel_main
 	b 	proc_hang		// should never come here
-
-// Gets the current execution level
-.globl get_el
-get_el:
-    mrs x0, CurrentEL
-    lsr x0, x0, #2
-    ret
