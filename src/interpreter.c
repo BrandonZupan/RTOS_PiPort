@@ -49,7 +49,11 @@ void time(void) {
 void timer1(void) {
     uint32_t next_time = OS_Timer1_Trigger();
     printf("%u cycles\r\n", next_time);
+}
 
+void switches(void) {
+    uint64_t num_switches = OS_NumSwitches();
+    printf("%u switches\r\n", num_switches);
 }
 
 /**
@@ -57,6 +61,7 @@ void timer1(void) {
 */
 
 void Interpreter(void) {
+    printf("=== Interpreter === \r\n");
     char input [MAX_INPUT];
     
     while (1) {
@@ -89,6 +94,10 @@ void Interpreter(void) {
 
         if (strcmp(command, "timer1") == 0) {
             timer1();
+        } else
+
+        if (strcmp(command, "switches") == 0) {
+            switches();
         }
     }
 }

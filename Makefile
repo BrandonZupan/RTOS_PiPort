@@ -19,6 +19,9 @@ install : kernel8.img
 serial :
 	screen /dev/tty.usbserial-0001 115200
 
+readelf : kernel8.img
+	$(ARMGNU)-readelf -a $(BUILD_DIR)/kernel8.elf
+
 $(BUILD_DIR)/%_c.o: $(SRC_DIR)/%.c
 	mkdir -p $(@D)
 	$(ARMGNU)-gcc $(COPS) -MMD -c $< -o $@

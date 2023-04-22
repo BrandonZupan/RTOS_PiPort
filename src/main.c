@@ -5,18 +5,41 @@
 #include "os.h"
 #include "interpreter.h"
 #include "mini_uart.h"
+#include "printf.h"
 
-void kernel_main(void)
-{
-    // uart_init();
-    // uart_send_string("You like programming microcontrollers, don't you\r\n");
+void ThreadIdle(void) {
+    printf("Starting idle...\r\n");
+    while (1) {};
+}
 
-    // while (1) {
-    //     uart_send(uart_recv());
-    // }
+void SleepSecondThread(void) {
+    uint32_t count = 0;
+    while (1) {
+        printf("Count: %u\r\n", count);
+        count++;
+        OS_Sleep(1000);
+    }
+}
 
+void SleepSecondThreadMain(void) {
     OS_Init();
+    printf("Init...\r\n");
+    OS_AddThread(&ThreadIdle, 1024, 1);
+    OS_AddThread(&SleepSecondThread, 1024, 0);
 
-    Interpreter();
+    printf("Launching...\r\n");
+    OS_Launch();
+}
 
+void InterpreterThreadMain(void) {
+    OS_Init();
+    OS_AddThread(&Interpreter, 1024, 0);
+
+    printf("Launching...\r\n");
+    OS_Launch();
+}
+
+void kernel_main(void) {
+    // SleepSecondThreadMain();
+    InterpreterThreadMain();
 }
