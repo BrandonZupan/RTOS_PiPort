@@ -34,7 +34,7 @@ typedef struct TCB {
     uint32_t id;
     uint32_t prio;
     Sema4_t *block_pt;
-    uint64_t stack[MAX_STACK_SIZE];
+    // uint64_t stack[MAX_STACK_SIZE];
 } TCB_t;
 
 void OS_Sleep(uint32_t time_ms);
@@ -52,6 +52,10 @@ void OS_Launch(void);
 void OS_InString(char * s, uint32_t max);
 
 void OS_BoyKisser(void);
+
+void OS_Counter(uint32_t counter);
+
+uint64_t OS_GetCounter(uint32_t counter);
 
 void OS_Init(void);
 

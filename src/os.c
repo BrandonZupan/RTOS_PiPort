@@ -16,7 +16,8 @@
 
 #define ROUND_ROBIN
 
-#define MAX_THREADS 6
+#define MAX_THREADS     6
+#define NUM_COUNTERS    10
 
 extern void __SwitchTask(TCB_t * prev, TCB_t * next);
 extern void __StartOS(TCB_t * run_pt);
@@ -29,6 +30,8 @@ TCB_t * InitialTask;
 uint64_t num_switches = 0;
 uint8_t is_running = 0;     // set to 1 after first context switch
 
+uint64_t Counters [NUM_COUNTERS];   // performance counters
+
 void putc(void * p, char c) {
     // output both to UART and display
     Display_putc(c);
@@ -36,7 +39,7 @@ void putc(void * p, char c) {
 }
 
 int findFirstFreeThread(void){
-  for(int i = 0; i < MAX_THREADS; i++){
+  for(int i = 1; i < MAX_THREADS; i++){
     if(!ThreadsLL[i].is_valid) {
         return i;
     }
@@ -69,13 +72,15 @@ void SwitchTask(TCB_t * next) {
     TCB_t * prev;
     if (is_running == 0) {
         prev = InitialTask;
+        is_running = 1;
     }
     else {
         prev = RunPt;
     }
 
     RunPt = next;
-    // printf("Calling __SwitchTask\r\n");
+    // printf("Calling __SwitchTask... prev ID: %d, next ID: %d\r\n", prev->id, next->id);
+    // printf("Will stack pointer: 0x%016X\r\n", next->sp);
     __SwitchTask(prev, next);
 }
 
@@ -104,9 +109,9 @@ void SleepDecriment(void) {
 
 // Called every timer tick
 void TimerTick(void) {
-    printf("TimerTick...\r\n");
+    // printf("TimerTick...\r\n");
     Scheduler();
-    SleepDecriment();
+    // SleepDecriment();
 }
 
 void InitialTaskInit(void) {
@@ -157,8 +162,9 @@ uint32_t OS_AddThread(void (*task)(void), uint64_t stackSize, uint32_t priority)
     ThreadsLL[first_free_thread].x19 = (uint64_t) task;
     ThreadsLL[first_free_thread].x20 = 0x2020202020202020;   // arg
     ThreadsLL[first_free_thread].pc = (uint64_t) ret_from_fork;
-    ThreadsLL[first_free_thread].sp = (uint64_t) &ThreadsLL->stack[0];
-
+    // ThreadsLL[first_free_thread].sp = (uint64_t) &ThreadsLL->stack[0];
+    ThreadsLL[first_free_thread].sp = get_free_page();
+    // printf("Stack Pointer: 0x%016X\r\n", ThreadsLL[first_free_thread].sp);
 
     ThreadsLL[first_free_thread].sleep = 0;
     ThreadsLL[first_free_thread].id = next_id++;
@@ -185,7 +191,7 @@ uint32_t OS_AddThread(void (*task)(void), uint64_t stackSize, uint32_t priority)
     enable_irq();
 
     printf("RunPt: 0x%08X\r\n", (uint64_t) RunPt);
-    printf("Task 0: 0x%08X\r\n", (uint64_t) &ThreadsLL[0]);
+    printf("Task %u: 0x%08X\r\n", first_free_thread, (uint64_t) &ThreadsLL[first_free_thread]);
 
     return 1;
 
@@ -195,14 +201,12 @@ uint32_t OS_AddThread(void (*task)(void), uint64_t stackSize, uint32_t priority)
 void OS_Launch(void) {
 
     // Emulate what example Pi OS does
-    Timer1_Init(TIME_1MS*1000, &TimerTick);
+    Timer1_Init(TIME_1MS, &TimerTick);
 
     while (1) {
         // printf("OS Launch loop\r\n");
         Scheduler();
     }
-
-
 
     // enable_interrupt_controller();
     // // Timer1_Init(TIME_1MS*1000, &TimerTick);
@@ -224,6 +228,21 @@ void OS_BoyKisser(void) {
         printf("%s", test_image[i]);
     }
     printf("You like programming microcontrollers, don't you\r\n");
+}
+
+void OS_Counter(uint32_t counter) {
+    if (counter < NUM_COUNTERS) {
+        Counters[counter]++;
+    }
+}
+
+uint64_t OS_GetCounter(uint32_t counter) {
+    if (counter < NUM_COUNTERS) {
+        return Counters[counter];
+    }
+    else {
+        return 0;
+    }
 }
 
 void OS_Init(void) {

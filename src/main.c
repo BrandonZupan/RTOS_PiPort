@@ -9,7 +9,9 @@
 
 void ThreadIdle(void) {
     printf("Starting idle...\r\n");
-    while (1) {};
+    while (1) {
+        OS_Counter(0);
+    }
 }
 
 void SleepSecondThread(void) {
@@ -34,8 +36,9 @@ void SleepSecondThreadMain(void) {
 void InterpreterThreadMain(void) {
     OS_Init();
     OS_AddThread(&Interpreter, 1024, 0);
+    OS_AddThread(&ThreadIdle, 1024, 1);
 
-    printf("Launching...\r\n");
+    // printf("Launching...\r\n");
     OS_Launch();
 }
 

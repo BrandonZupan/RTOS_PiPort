@@ -5,6 +5,7 @@
 
 #include "printf.h"
 #include "os.h"
+#include "irq.h"
 
 #define MAX_INPUT 128
 
@@ -56,6 +57,11 @@ void switches(void) {
     printf("%u switches\r\n", num_switches);
 }
 
+void counter(uint32_t counter) {
+    uint64_t counts = OS_GetCounter(counter);
+    printf("%ur\n", counts);
+}
+
 /**
  * Interpreter
 */
@@ -66,11 +72,13 @@ void Interpreter(void) {
     
     while (1) {
         printf("BEvOS.Pi /> ");
+        // disable_irq();
         OS_InString(input, MAX_INPUT);
+        // enable_irq();
         printf("\r\n");
 
         // Do something
-        // printf("%s\r\n", input);
+        printf("Received: %s\r\n", input);
         int space_index = FindSpace(input, 0);
         char command [MAX_INPUT];
         strncpy(command, input, space_index);
@@ -98,6 +106,10 @@ void Interpreter(void) {
 
         if (strcmp(command, "switches") == 0) {
             switches();
+        } else 
+
+        if (strcmp(command, "counter") == 0) {
+            OS_Counter(0);
         }
     }
 }
