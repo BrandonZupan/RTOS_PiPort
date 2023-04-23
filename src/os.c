@@ -12,6 +12,7 @@
 #include "uart.h"
 #include "timer.h"
 #include "irq.h"
+#include "mm.h"
 
 #define ROUND_ROBIN
 
@@ -23,8 +24,10 @@ extern void ret_from_fork(void);
 
 TCB_t ThreadsLL[MAX_THREADS];
 TCB_t * RunPt;
+TCB_t * InitialTask;
 
 uint64_t num_switches = 0;
+uint8_t is_running = 0;     // set to 1 after first context switch
 
 void putc(void * p, char c) {
     // output both to UART and display
@@ -57,13 +60,22 @@ TCB_t * FindNextTask(void) {
 }
 
 void SwitchTask(TCB_t * next) {
-    if (next == RunPt) {
-        enable_irq();
-        return;
+    // if (next == RunPt) {
+    //     enable_irq();
+    //     return;
+    // }
+
+    // 
+    TCB_t * prev;
+    if (is_running == 0) {
+        prev = InitialTask;
     }
-    TCB_t * prev = RunPt;
+    else {
+        prev = RunPt;
+    }
+
     RunPt = next;
-    printf("Calling __SwitchTask\r\n");
+    // printf("Calling __SwitchTask\r\n");
     __SwitchTask(prev, next);
 }
 
@@ -73,7 +85,7 @@ void Scheduler(void) {
     disable_irq();
     num_switches++;
     TCB_t * next_task = FindNextTask();
-    printf("Next task ID: %d\r\n", next_task->id);
+    // printf("Next task ID: %d\r\n", next_task->id);
     SwitchTask(next_task);
     // enable_irq();    // done in __SwitchTask()
 }
@@ -95,6 +107,20 @@ void TimerTick(void) {
     printf("TimerTick...\r\n");
     Scheduler();
     SleepDecriment();
+}
+
+void InitialTaskInit(void) {
+    // Set initial task
+    ThreadsLL[0].is_valid = 1;      // keeps findFirstFreeThread from finding it
+    InitialTask = &ThreadsLL[0];
+    is_running = 0;
+}
+
+void Debug_ReturnFromFormMsg(uint64_t jump_addr) {
+    printf("Return from fork... Jumping to 0x%08X\r\n", jump_addr);
+    // for (uint64_t i = 0; i < TIME_1MS * 1000; i++) {
+    //     //hang out here
+    // }
 }
 
 void OS_Sleep(uint32_t time_ms) {
@@ -167,14 +193,25 @@ uint32_t OS_AddThread(void (*task)(void), uint64_t stackSize, uint32_t priority)
 
 // Launch OS with 1ms tick time
 void OS_Launch(void) {
-    enable_interrupt_controller();
-    // Timer1_Init(TIME_1MS*1000, &TimerTick);
-    enable_irq();
-    __StartOS(RunPt);
 
-    // Should not return here
-    printf("ERROR: __StartOS returned to OS_Launch\r\n");
-    while (1) {};
+    // Emulate what example Pi OS does
+    Timer1_Init(TIME_1MS*1000, &TimerTick);
+
+    while (1) {
+        // printf("OS Launch loop\r\n");
+        Scheduler();
+    }
+
+
+
+    // enable_interrupt_controller();
+    // // Timer1_Init(TIME_1MS*1000, &TimerTick);
+    // enable_irq();
+    // __StartOS(RunPt);
+
+    // // Should not return here
+    // printf("ERROR: __StartOS returned to OS_Launch\r\n");
+    // while (1) {};
 }
 
 void OS_InString(char * s, uint32_t max) {
@@ -193,9 +230,12 @@ void OS_Init(void) {
     uart_init();
     init_printf(NULL, putc);
     irq_vector_init();
+    enable_interrupt_controller();
 
     uart_init();
     DisplayInit();
+
+    
 
     // OS_BoyKisser();
 }
