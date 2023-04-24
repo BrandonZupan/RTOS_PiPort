@@ -14,21 +14,26 @@
 #include "irq.h"
 #include "mm.h"
 
-#define ROUND_ROBIN
+// #define ROUND_ROBIN
+#define PRIORITY_SCHEDULER
 
 #define MAX_THREADS     6
 #define NUM_COUNTERS    10
+#define PRIORITY_LEVELS 6
 
 extern void __SwitchTask(TCB_t * prev, TCB_t * next);
 extern void __StartOS(TCB_t * run_pt);
 extern void ret_from_fork(void);
 
 TCB_t ThreadsLL[MAX_THREADS];
+TCB_t * PriorityPointers[PRIORITY_LEVELS];
+
 TCB_t * RunPt;
 TCB_t * InitialTask;
 
 uint64_t num_switches = 0;
 uint8_t is_running = 0;     // set to 1 after first context switch
+uint8_t is_scheduler_enabled = 0;
 
 uint64_t Counters [NUM_COUNTERS];   // performance counters
 
@@ -47,17 +52,53 @@ int findFirstFreeThread(void){
   return MAX_THREADS;
 }
 
-TCB_t * FindNextTask(void) {
+TCB_t * FindNextTaskRoundRobin(void) {
     TCB_t * current = RunPt;
 
-    #ifdef ROUND_ROBIN
     // find next task that is not sleeping and not blocked
     do {
         current = current->next;
     } while ((current->sleep != 0) || (current->block_pt != NULL));
 
     return current;
-    #endif
+}
+
+TCB_t * FindNextTaskPriority(void) {
+    for (int i = 0; i < PRIORITY_LEVELS; i++) {
+        if (PriorityPointers[i] != NULL) {
+            TCB_t * temp_ptr = PriorityPointers[i];
+            // try to find entry that is alive
+            while (1) {
+                // if we find something, return it
+                if (temp_ptr->sleep == 0 && temp_ptr->block_pt == NULL) {
+                    PriorityPointers[i] = temp_ptr->next;   // round robin throughout priority level
+                    return temp_ptr;
+                }
+                else {
+                    // check next entry at level
+                    temp_ptr = temp_ptr->next;
+                    if (temp_ptr == PriorityPointers[i]) {
+                        // try next level
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    // If we are here then it found no threads
+    return NULL;
+}
+
+TCB_t * FindNextTask(void) {
+#ifdef ROUND_ROBIN
+    return FindNextTaskRoundRobin();
+#endif
+
+#ifdef PRIORITY_SCHEDULER
+    return FindNextTaskPriority();
+#endif
+
 
     return NULL;
 }
@@ -79,7 +120,16 @@ void SwitchTask(TCB_t * next) {
     }
 
     RunPt = next;
-    // printf("Calling __SwitchTask... prev ID: %d, next ID: %d\r\n", prev->id, next->id);
+    if (prev->id != next->id) {
+        // printf("Calling __SwitchTask... prev ID: %d, next ID: %d\r\n", prev->id, next->id);
+        // printf("Next PC: 0x%08X\r\n", next->pc);
+    }
+    // static int count = 0;
+    // if (count == 5) {
+    //     disable_irq();
+    //     while (1) {};
+    // }
+    // count++;
     // printf("Will stack pointer: 0x%016X\r\n", next->sp);
     __SwitchTask(prev, next);
 }
@@ -87,12 +137,14 @@ void SwitchTask(TCB_t * next) {
 // Called every timer tick, so prob 1ms
 // Gets next task and runs it
 void Scheduler(void) {
-    disable_irq();
-    num_switches++;
-    TCB_t * next_task = FindNextTask();
-    // printf("Next task ID: %d\r\n", next_task->id);
-    SwitchTask(next_task);
-    // enable_irq();    // done in __SwitchTask()
+    if (is_scheduler_enabled) {
+        disable_irq();
+        num_switches++;
+        TCB_t * next_task = FindNextTask();
+        // printf("Next task ID: %d\r\n", next_task->id);
+        SwitchTask(next_task);
+        // enable_irq();    // done in __SwitchTask()
+    }
 }
 
 // Called around every MS
@@ -118,7 +170,7 @@ void TimerTick(void) {
     SleepDecriment();
 
     // call every 10ms (or something, idk)
-    if (count >= 10) {
+    if (count >= 100) {
         Scheduler();
         count = 0;
     }
@@ -130,6 +182,7 @@ void TimerTick(void) {
 void InitialTaskInit(void) {
     // Set initial task
     ThreadsLL[0].is_valid = 1;      // keeps findFirstFreeThread from finding it
+    ThreadsLL[0].id = 69420;
     InitialTask = &ThreadsLL[0];
     is_running = 0;
 }
@@ -189,6 +242,11 @@ uint32_t OS_AddThread(void (*task)(void), uint64_t stackSize, uint32_t priority)
         RunPt = &ThreadsLL[first_free_thread];
         RunPt->next = RunPt;
         RunPt->prev = RunPt;
+
+        #ifdef PRIORITY_SCHEDULER
+        // add it to priority list
+        PriorityPointers[priority] = RunPt;
+        #endif
     } else {
         #ifdef ROUND_ROBIN
         TCB_t *temp_next = RunPt->next;
@@ -197,14 +255,36 @@ uint32_t OS_AddThread(void (*task)(void), uint64_t stackSize, uint32_t priority)
         ThreadsLL[first_free_thread].next = temp_next;
         ThreadsLL[first_free_thread].prev = RunPt;
         temp_next->prev = &ThreadsLL[first_free_thread];
+        #endif
 
+        #ifdef PRIORITY_SCHEDULER
+        // Insert it into its priority level
+        if (PriorityPointers[priority] != NULL) {
+            // Add to beginning
+            TCB_t * old_first = PriorityPointers[priority];
+            TCB_t * last = old_first->prev;
+            PriorityPointers[priority] = &ThreadsLL[first_free_thread];
+
+            // old first is after new entry
+            PriorityPointers[priority]->next = old_first;
+            old_first->prev = PriorityPointers[priority];
+
+            // update last so it points to new first
+            last->next = PriorityPointers[priority];
+            PriorityPointers[priority]->prev = last;
+        }
+        else {
+            PriorityPointers[priority] = &ThreadsLL[first_free_thread];
+            PriorityPointers[priority]->next = PriorityPointers[priority];
+            PriorityPointers[priority]->prev = PriorityPointers[priority];
+        }
         #endif
     }
 
     enable_irq();
 
-    printf("RunPt: 0x%08X\r\n", (uint64_t) RunPt);
-    printf("Task %u: 0x%08X\r\n", first_free_thread, (uint64_t) &ThreadsLL[first_free_thread]);
+    // printf("RunPt: 0x%08X\r\n", (uint64_t) RunPt);
+    // printf("Task %u: 0x%08X\r\n", first_free_thread, (uint64_t) &ThreadsLL[first_free_thread]);
 
     return 1;
 
@@ -215,6 +295,7 @@ void OS_Launch(void) {
 
     // Emulate what example Pi OS does
     Timer1_Init(TIME_1MS, &TimerTick);
+    OS_EnableScheduler();
 
     while (1) {
         // printf("OS Launch loop\r\n");
@@ -244,18 +325,32 @@ void OS_BoyKisser(void) {
 }
 
 void OS_Counter(uint32_t counter) {
+    // OS_DisableScheduler();
     if (counter < NUM_COUNTERS) {
         Counters[counter]++;
     }
+    // OS_EnableScheduler();
 }
 
 uint64_t OS_GetCounter(uint32_t counter) {
+    uint64_t result = 0;
+    // OS_DisableScheduler();
+
     if (counter < NUM_COUNTERS) {
-        return Counters[counter];
+        result = Counters[counter];
+
     }
-    else {
-        return 0;
-    }
+
+    // OS_EnableScheduler();
+    return result;
+}
+
+void OS_DisableScheduler(void) {
+    is_scheduler_enabled = 0;
+}
+
+void OS_EnableScheduler(void) {
+    is_scheduler_enabled = 1;
 }
 
 void OS_Init(void) {
@@ -263,11 +358,9 @@ void OS_Init(void) {
     init_printf(NULL, putc);
     irq_vector_init();
     enable_interrupt_controller();
+    InitialTaskInit();
 
     uart_init();
     DisplayInit();
-
-    
-
     // OS_BoyKisser();
 }

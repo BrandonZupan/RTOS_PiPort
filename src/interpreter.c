@@ -62,6 +62,11 @@ void counter(uint32_t counter) {
     printf("%u\r\n", counts);
 }
 
+void sleep(uint32_t ms) {
+    // printf("Sleeping for %u ms\r\n", ms);
+    OS_Sleep(ms);
+}
+
 /**
  * Interpreter
 */
@@ -110,6 +115,10 @@ void Interpreter(void) {
 
         if (strcmp(command, "counter") == 0) {
             counter(0);
+        } else 
+
+        if (strcmp(command, "sleep") == 0) {
+            sleep(1000);
         }
     }
 }

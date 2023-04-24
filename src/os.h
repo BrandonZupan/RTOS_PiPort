@@ -57,6 +57,10 @@ void OS_Counter(uint32_t counter);
 
 uint64_t OS_GetCounter(uint32_t counter);
 
+void OS_DisableScheduler(void);
+
+void OS_EnableScheduler(void);
+
 void OS_Init(void);
 
 #endif  /*_OS_H*/
