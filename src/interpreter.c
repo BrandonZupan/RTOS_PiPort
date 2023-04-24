@@ -59,7 +59,7 @@ void switches(void) {
 
 void counter(uint32_t counter) {
     uint64_t counts = OS_GetCounter(counter);
-    printf("%ur\n", counts);
+    printf("%u\r\n", counts);
 }
 
 /**
@@ -78,7 +78,7 @@ void Interpreter(void) {
         printf("\r\n");
 
         // Do something
-        printf("Received: %s\r\n", input);
+        // printf("Received: %s\r\n", input);
         int space_index = FindSpace(input, 0);
         char command [MAX_INPUT];
         strncpy(command, input, space_index);
@@ -109,7 +109,7 @@ void Interpreter(void) {
         } else 
 
         if (strcmp(command, "counter") == 0) {
-            OS_Counter(0);
+            counter(0);
         }
     }
 }

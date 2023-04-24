@@ -102,6 +102,9 @@ void SleepDecriment(void) {
         if (ThreadsLL[i].is_valid) {
             if (ThreadsLL[i].sleep > 0) {
                 ThreadsLL[i].sleep--;
+                if (ThreadsLL[i].sleep == 0) {
+                    // printf("Thread %u no longer sleeping\r\n", ThreadsLL[i].id);
+                }
             }
         }
     }
@@ -109,9 +112,19 @@ void SleepDecriment(void) {
 
 // Called every timer tick
 void TimerTick(void) {
+    static uint32_t count = 0;
+
     // printf("TimerTick...\r\n");
-    Scheduler();
-    // SleepDecriment();
+    SleepDecriment();
+
+    // call every 10ms (or something, idk)
+    if (count >= 10) {
+        Scheduler();
+        count = 0;
+    }
+    else {
+        count++;
+    }
 }
 
 void InitialTaskInit(void) {
@@ -122,7 +135,7 @@ void InitialTaskInit(void) {
 }
 
 void Debug_ReturnFromFormMsg(uint64_t jump_addr) {
-    printf("Return from fork... Jumping to 0x%08X\r\n", jump_addr);
+    // printf("Return from fork... Jumping to 0x%08X\r\n", jump_addr);
     // for (uint64_t i = 0; i < TIME_1MS * 1000; i++) {
     //     //hang out here
     // }

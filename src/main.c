@@ -11,6 +11,7 @@ void ThreadIdle(void) {
     printf("Starting idle...\r\n");
     while (1) {
         OS_Counter(0);
+        OS_Sleep(1000);
     }
 }
 
