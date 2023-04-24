@@ -34,6 +34,7 @@ typedef struct TCB {
     uint32_t id;
     uint32_t prio;
     Sema4_t *block_pt;
+    uint64_t initial_sp;
     // uint64_t stack[MAX_STACK_SIZE];
 } TCB_t;
 
@@ -60,6 +61,10 @@ uint64_t OS_GetCounter(uint32_t counter);
 void OS_DisableScheduler(void);
 
 void OS_EnableScheduler(void);
+
+void OS_PrintTCB(TCB_t * tcb);
+
+void OS_PrintRunPt(void);
 
 void OS_Init(void);
 

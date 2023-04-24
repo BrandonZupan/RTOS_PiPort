@@ -38,7 +38,7 @@ __SwitchTask:
     ldr x30, [x8]       // Link Register stored with PC label
     mov sp, x9
 
-    msr    daifclr, #2  // enable interrupts
+    // msr    daifclr, #2  // enable interrupts
 
     ret     // Jump to new LR
 

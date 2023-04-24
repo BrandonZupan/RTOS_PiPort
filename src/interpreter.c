@@ -2,6 +2,8 @@
 // Brandon Zupan
 
 #include "string.h"
+#include <stdint.h>
+#include <stddef.h>
 
 #include "printf.h"
 #include "os.h"
@@ -57,13 +59,25 @@ void switches(void) {
     printf("%u switches\r\n", num_switches);
 }
 
-void counter(uint32_t counter) {
-    uint64_t counts = OS_GetCounter(counter);
-    printf("%u\r\n", counts);
+void null(void) {
+    uint8_t *p = NULL;
+    printf("0x%02X%02X%02X%02X\r\n", ((const uint8_t *)&p)[0], ((const uint8_t *)&p)[1], ((const uint8_t *)&p)[2], ((const uint8_t *)&p)[3]);
+}
+
+// void counter(uint32_t counter) {
+//     uint64_t counts = OS_GetCounter(counter);
+//     printf("%u\r\n", counts);
+// }
+
+void counters(void) {
+    uint64_t count0 = OS_GetCounter(0);
+    uint64_t count1 = OS_GetCounter(1);
+    printf("Counter 0: %u\r\n", count0);
+    printf("Counter 1: %u\r\n", count1);
 }
 
 void sleep(uint32_t ms) {
-    // printf("Sleeping for %u ms\r\n", ms);
+    printf("Sleeping for %u ms\r\n", ms);
     OS_Sleep(ms);
 }
 
@@ -113,12 +127,16 @@ void Interpreter(void) {
             switches();
         } else 
 
-        if (strcmp(command, "counter") == 0) {
-            counter(0);
+        if (strcmp(command, "counters") == 0) {
+            counters();
         } else 
 
         if (strcmp(command, "sleep") == 0) {
-            sleep(1000);
+            sleep(5000);
+        } else 
+
+        if (strcmp(command, "null") == 0) {
+            null();
         }
     }
 }

@@ -39,7 +39,7 @@ uint64_t Counters [NUM_COUNTERS];   // performance counters
 
 void putc(void * p, char c) {
     // output both to UART and display
-    Display_putc(c);
+    // Display_putc(c);
     uart_send(c);
 }
 
@@ -138,7 +138,7 @@ void SwitchTask(TCB_t * next) {
 // Gets next task and runs it
 void Scheduler(void) {
     if (is_scheduler_enabled) {
-        disable_irq();
+        // disable_irq();
         num_switches++;
         TCB_t * next_task = FindNextTask();
         // printf("Next task ID: %d\r\n", next_task->id);
@@ -230,6 +230,7 @@ uint32_t OS_AddThread(void (*task)(void), uint64_t stackSize, uint32_t priority)
     ThreadsLL[first_free_thread].pc = (uint64_t) ret_from_fork;
     // ThreadsLL[first_free_thread].sp = (uint64_t) &ThreadsLL->stack[0];
     ThreadsLL[first_free_thread].sp = get_free_page();
+    ThreadsLL[first_free_thread].initial_sp = ThreadsLL[first_free_thread].sp;
     // printf("Stack Pointer: 0x%016X\r\n", ThreadsLL[first_free_thread].sp);
 
     ThreadsLL[first_free_thread].sleep = 0;
@@ -285,6 +286,9 @@ uint32_t OS_AddThread(void (*task)(void), uint64_t stackSize, uint32_t priority)
 
     // printf("RunPt: 0x%08X\r\n", (uint64_t) RunPt);
     // printf("Task %u: 0x%08X\r\n", first_free_thread, (uint64_t) &ThreadsLL[first_free_thread]);
+
+    printf("New Thread ID: %u", ThreadsLL[first_free_thread].id);
+    printf("\tSP: 0x%08X\r\n", ThreadsLL[first_free_thread].sp);
 
     return 1;
 
@@ -353,6 +357,38 @@ void OS_EnableScheduler(void) {
     is_scheduler_enabled = 1;
 }
 
+void OS_PrintTCB(TCB_t * tcb) {
+    printf("TCB ID: %u\r\n", tcb->id);
+    printf("\tx19: 0x%08X\r\n", tcb->x19);
+    printf("\tx20: 0x%08X\r\n", tcb->x20);
+    printf("\tx21: 0x%08X\r\n", tcb->x21);
+    printf("\tx22: 0x%08X\r\n", tcb->x22);
+    printf("\tx23: 0x%08X\r\n", tcb->x23);
+    printf("\tx24: 0x%08X\r\n", tcb->x24);
+    printf("\tx25: 0x%08X\r\n", tcb->x25);
+    printf("\tx26: 0x%08X\r\n", tcb->x26);
+    printf("\tx27: 0x%08X\r\n", tcb->x27);
+    printf("\tx28: 0x%08X\r\n", tcb->x28);
+    printf("\txfp: 0x%08X\r\n", tcb->fp);
+    printf("\tSP: 0x%08X\r\n", tcb->sp);
+    printf("\tPC: 0x%08X\r\n", tcb->pc);
+}
+
+void OS_PrintStackTrace(TCB_t * tcb) {
+    printf("Stack Trace\r\n");
+    uint64_t * sp = (uint64_t *) tcb->sp;
+    uint64_t i = 0;
+    while (&sp[i] <= (uint64_t *) tcb->initial_sp) {
+        printf("\t0x%08X: 0x%08X\r\n", &sp[i], sp[i]);
+        i++;
+    }
+}
+
+void OS_PrintRunPt(void) {
+    OS_PrintTCB(RunPt);
+    OS_PrintStackTrace(RunPt);
+}
+
 void OS_Init(void) {
     uart_init();
     init_printf(NULL, putc);
@@ -361,6 +397,6 @@ void OS_Init(void) {
     InitialTaskInit();
 
     uart_init();
-    DisplayInit();
+    // DisplayInit();
     // OS_BoyKisser();
 }
