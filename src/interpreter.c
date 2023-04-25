@@ -11,6 +11,8 @@
 
 #define MAX_INPUT 128
 
+Sema4_t semaphore_demo;
+
 extern int get_el(void);
 
 int FindSpace(char *string, int startIndex){
@@ -25,6 +27,25 @@ int FindSpace(char *string, int startIndex){
   }
   //if no space is found, return the index of the end of the string
   return index;
+}
+
+void SemaphoreWait(void) {
+    // Wait on a semaphore then print a message
+    printf("WAITER: Waiting on Sema4\r\n");
+    OS_bWait(&semaphore_demo);
+    printf("WAITER: Finished waiting\r\n");
+
+    OS_Kill();
+}
+
+void SemaphoreSignal(void) {
+    printf("SIGNALER: Sleeping for 3 seconds\r\n");
+    OS_Sleep(3000);
+
+    printf("SIGNALER: Signaling\r\n");
+    OS_bSignal(&semaphore_demo);
+
+    OS_Kill();
 }
 
 /**
@@ -79,6 +100,19 @@ void counters(void) {
 void sleep(uint32_t ms) {
     printf("Sleeping for %u ms\r\n", ms);
     OS_Sleep(ms);
+}
+
+void semaphore(void) {
+    // Create 2 threads, one waits on the other
+    OS_DisableScheduler();
+
+    OS_InitSemaphore(&semaphore_demo, 0);
+
+    OS_AddThread(&SemaphoreWait, 1024, 0);
+    OS_AddThread(&SemaphoreSignal, 1024, 1);
+
+    OS_EnableScheduler();
+    OS_Sleep(6000);
 }
 
 /**
@@ -137,6 +171,10 @@ void Interpreter(void) {
 
         if (strcmp(command, "null") == 0) {
             null();
+        } else 
+
+        if (strcmp(command, "semaphore") == 0) {
+            semaphore();
         }
     }
 }

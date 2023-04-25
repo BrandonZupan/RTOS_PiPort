@@ -17,8 +17,8 @@
 // #define ROUND_ROBIN
 #define PRIORITY_SCHEDULER
 
-#define MAX_THREADS     6
-#define NUM_COUNTERS    10
+#define MAX_THREADS     10
+#define NUM_COUNTERS    6
 #define PRIORITY_LEVELS 6
 
 extern void __SwitchTask(TCB_t * prev, TCB_t * next);
@@ -144,6 +144,8 @@ void Scheduler(void) {
         // printf("Next task ID: %d\r\n", next_task->id);
         SwitchTask(next_task);
         // enable_irq();    // done in __SwitchTask()
+    } else {
+        // printf("SCHEDULER: Scheduler disabled...\r\n");
     }
 }
 
@@ -169,8 +171,9 @@ void TimerTick(void) {
     // printf("TimerTick...\r\n");
     SleepDecriment();
 
-    // call every 10ms (or something, idk)
+    // call every 100ms (or something, idk)
     if (count >= 100) {
+        // printf("TIMERTICK: Timer calling scheduler...\r\n");
         Scheduler();
         count = 0;
     }
@@ -215,7 +218,7 @@ uint64_t OS_NumSwitches(void) {
 uint32_t OS_AddThread(void (*task)(void), uint64_t stackSize, uint32_t priority) {
     static uint32_t next_id = 0;
 
-    disable_irq();
+    // disable_irq();
     int first_free_thread = findFirstFreeThread();
     if (first_free_thread >= MAX_THREADS) {
         return 0;
@@ -282,13 +285,13 @@ uint32_t OS_AddThread(void (*task)(void), uint64_t stackSize, uint32_t priority)
         #endif
     }
 
-    enable_irq();
+    // enable_irq();
 
     // printf("RunPt: 0x%08X\r\n", (uint64_t) RunPt);
     // printf("Task %u: 0x%08X\r\n", first_free_thread, (uint64_t) &ThreadsLL[first_free_thread]);
 
-    printf("New Thread ID: %u", ThreadsLL[first_free_thread].id);
-    printf("\tSP: 0x%08X\r\n", ThreadsLL[first_free_thread].sp);
+    // printf("New Thread ID: %u", ThreadsLL[first_free_thread].id);
+    // printf("\tSP: 0x%08X\r\n", ThreadsLL[first_free_thread].sp);
 
     return 1;
 
@@ -300,6 +303,7 @@ void OS_Launch(void) {
     // Emulate what example Pi OS does
     Timer1_Init(TIME_1MS, &TimerTick);
     OS_EnableScheduler();
+    enable_irq();
 
     while (1) {
         // printf("OS Launch loop\r\n");
@@ -387,6 +391,66 @@ void OS_PrintStackTrace(TCB_t * tcb) {
 void OS_PrintRunPt(void) {
     OS_PrintTCB(RunPt);
     OS_PrintStackTrace(RunPt);
+}
+
+void OS_InitSemaphore(Sema4_t *sema_pt, int32_t value) {
+    // OS_DisableScheduler();
+    sema_pt->value = value;
+    // OS_EnableScheduler();
+}
+
+void OS_bWait(Sema4_t *sema_pt) {
+    OS_DisableScheduler();
+    // printf("Semaphore value: %d\r\n", sema_pt->value);
+    while (sema_pt->value == 0) {
+        RunPt->block_pt = sema_pt;
+        OS_EnableScheduler();
+        Scheduler();
+        sema_pt->value = 0;
+        enable_irq();
+        return;
+    }
+    sema_pt->value = 0;
+    enable_irq();
+    OS_EnableScheduler();
+}
+
+void OS_bSignal(Sema4_t *sema_pt) {
+    OS_DisableScheduler();
+    if (sema_pt->value <= 0) {
+        // iterate through all threads and find the one that is blocked
+        for (int i = 0; i < MAX_THREADS; i++) {
+            if (ThreadsLL[i].is_valid && (ThreadsLL[i].block_pt == sema_pt)) {
+                ThreadsLL[i].block_pt = NULL;
+                // printf("No longer blocking thread %d\r\n", ThreadsLL[i].id);
+                enable_irq();
+            }
+        }
+    }
+
+    sema_pt->value = 1;
+    OS_EnableScheduler();
+}
+
+void OS_Kill(void) {
+    OS_DisableScheduler();
+    RunPt->is_valid = 0;
+
+    // check if this is the only thread with its priority
+    if (RunPt->next == RunPt) {
+        PriorityPointers[RunPt->prio] = NULL;
+    }
+    else {
+        // remove it from linked list
+        RunPt->prev->next = RunPt->next;
+        RunPt->next->prev = RunPt->prev;
+    }
+
+    OS_EnableScheduler();
+    // printf("KILL: Killed\r\n");
+    while (1) {};   // wait for scheduler to move on
+    // OS_Sleep(1000);
+    // Scheduler();
 }
 
 void OS_Init(void) {

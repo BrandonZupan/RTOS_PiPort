@@ -66,6 +66,14 @@ void OS_PrintTCB(TCB_t * tcb);
 
 void OS_PrintRunPt(void);
 
+void OS_InitSemaphore(Sema4_t *sema_pt, int32_t value);
+
+void OS_bWait(Sema4_t *sema_pt);
+
+void OS_bSignal(Sema4_t *sema_pt);
+
+void OS_Kill(void);
+
 void OS_Init(void);
 
 #endif  /*_OS_H*/
